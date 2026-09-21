@@ -2654,6 +2654,7 @@ const ProfileModal = ({ user, orders, onClose, onLogout, wishlistProducts, onRem
     email: user.email, 
     phoneNumber: user.phoneNumber || '', 
     address: user.address || '', 
+    profilePic: user.profilePic || '',
     password: '' 
   });
 
