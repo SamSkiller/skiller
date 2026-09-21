@@ -168,23 +168,44 @@ app.delete("/api/products/:id", authenticate, async (req, res) => {
 // --- AUTH ---
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { email, password, name, phoneNumber } = req.body;
+    const { email, password, name, phoneNumber, address } = req.body;
+
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+
     const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ 
-      email, 
-      password: hashedPassword, 
+
+    const user = new User({
+      email,
+      password: hashedPassword,
       name,
-      phoneNumber, // Fixed: Save Phone Number
+      phoneNumber: phoneNumber || "",
+      address: address || "",          // Drop-off zone
       role: email === "skiller@skiller" ? "admin" : "customer"
     });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
-    res.status(201).json({ user, token });
-  } catch {
-    res.status(500).json({ error: "Registration failed" });
+    await user.save();                 // ← THIS WAS MISSING
+
+    // Never send the password back to the frontend
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({ user: userResponse, token });
+  } catch (err) {
+    console.error("Registration error:", err);
+    res.status(500).json({ message: "Registration failed", error: err.message });
   }
 });
 
