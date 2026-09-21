@@ -1024,7 +1024,7 @@ const handleSaveProduct = (e: React.FormEvent) => {
 const AuthView = ({ onAuthSuccess, showToast }: any) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phoneNumber: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phoneNumber: '', address: '', password: '', confirmPassword: '' });
   
   // Forgot Password States
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -1039,8 +1039,18 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
     setIsLoading(true);
     try {
       const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
+      // Clean payload – never send confirmPassword
+      const payload = isLogin
+        ? { email: formData.email, password: formData.password }
+        : { 
+            name: formData.name, 
+            email: formData.email, 
+            phoneNumber: formData.phoneNumber, 
+            address: formData.address,
+            password: formData.password 
+          };
+      const res = await fetch(`\( {API_BASE} \){endpoint}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const authData = await res.json();
       if (!res.ok) throw new Error(authData.message || "Identity verification failed.");
@@ -1140,7 +1150,8 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
         <form onSubmit={handleAuthSubmit} className="space-y-4 text-left">
           {!isLogin && <input required className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />}
           {!isLogin && <input required type="tel" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Phone Number (M-Pesa)" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} />}
-
+          {!isLogin && <input required className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Drop-off Location / Delivery Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />}
+          
           <input required type="email" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Email Address" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
           <input required type="password" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
           
@@ -1166,7 +1177,7 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
           </div>
         </div>
 
-        <button onClick={() => {setIsLogin(!isLogin); setFormData({name:'', email:'', phoneNumber:'', password:'', confirmPassword:''});}} className="mt-8 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 transition-colors tracking-widest flex flex-col items-center justify-center gap-1 mx-auto">
+        <button onClick={() => {setIsLogin(!isLogin); setFormData({name:'', email:'', phoneNumber:'', address:'', password:'', confirmPassword:''});}} className="mt-8 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 transition-colors tracking-widest flex flex-col items-center justify-center gap-1 mx-auto">          
           {isLogin ? "Don't have an account?" : "Already have an account?"}
           <span className="text-rose-600 underline decoration-rose-500 underline-offset-4 hover:text-rose-400 py-1">{isLogin ? "Register Here" : "Log In Here"}</span>
         </button>
