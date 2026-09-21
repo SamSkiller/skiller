@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ShoppingBag, X, Star, Trash2, Plus, Minus, Truck, Smartphone, CheckCircle2, 
