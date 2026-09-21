@@ -533,41 +533,72 @@ app.post("/api/mpesa/stkpush", authenticate, async (req, res) => {
   const formattedPhone = phone.replace(/^0/, "254").replace(/^\+/, "");
 
   try {
-    const authAuth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString('base64');
-    const authRes = await fetch("https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials", {
-      headers: { "Authorization": `Basic ${authAuth}` }
-    });
+    // 1. Get Access Token (PRODUCTION)
+    const auth = Buffer.from(
+      `\( {process.env.MPESA_CONSUMER_KEY}: \){process.env.MPESA_CONSUMER_SECRET}`
+    ).toString("base64");
+
+    const authRes = await fetch(
+      "https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+      {
+        headers: { Authorization: `Basic ${auth}` },
+      }
+    );
+
     const { access_token } = await authRes.json();
 
-    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, -3);
-    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString('base64');
+    if (!access_token) {
+      return res.status(500).json({ success: false, message: "Failed to get M-Pesa access token" });
+    }
 
-    const stkRes = await fetch("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest", {
-      method: 'POST',
-      headers: { "Authorization": `Bearer ${access_token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        BusinessShortCode: process.env.MPESA_SHORTCODE,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: "CustomerPayBillOnline",
-        Amount: amount,
-        PartyA: formattedPhone,
-        PartyB: process.env.MPESA_SHORTCODE,
-        PhoneNumber: formattedPhone,
-        CallBackURL: "https://your-domain.com/api/mpesa/callback", // Update to your real domain later
-        AccountReference: "Faith Shop",
-        TransactionDesc: "Sanctuary Asset Purchase"
-      })
-    });
+    // 2. Prepare STK Push
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[^0-9]/g, "")
+      .slice(0, -3);
+
+    const password = Buffer.from(
+      `\( {process.env.MPESA_SHORTCODE} \){process.env.MPESA_PASSKEY}${timestamp}`
+    ).toString("base64");
+
+    // 3. Send STK Push (PRODUCTION)
+    const stkRes = await fetch(
+      "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          BusinessShortCode: process.env.MPESA_SHORTCODE,
+          Password: password,
+          Timestamp: timestamp,
+          TransactionType: "CustomerPayBillOnline",
+          Amount: Math.ceil(amount), // must be whole number
+          PartyA: formattedPhone,
+          PartyB: process.env.MPESA_SHORTCODE,
+          PhoneNumber: formattedPhone,
+          CallBackURL: "https://faith-blst.onrender.com/api/mpesa/callback", // ← change to your real domain
+          AccountReference: "Skiller Shop",
+          TransactionDesc: "Skiller Shop Payment",
+        }),
+      }
+    );
 
     const stkData = await stkRes.json();
+
     if (stkData.ResponseCode === "0") {
-      res.json({ success: true, message: "M-Pesa STK Push sent to device." });
+      res.json({ success: true, message: "M-Pesa STK Push sent successfully" });
     } else {
-      res.status(400).json({ success: false, message: stkData.errorMessage || "Failed to initiate M-Pesa." });
+      res.status(400).json({
+        success: false,
+        message: stkData.errorMessage || stkData.ResponseDescription || "STK Push failed",
+      });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: "M-Pesa API communication error." });
+    console.error("M-Pesa Error:", error);
+    res.status(500).json({ success: false, message: "M-Pesa communication error" });
   }
 });
 
