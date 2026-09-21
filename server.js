@@ -100,7 +100,6 @@ const orderSchema = new mongoose.Schema({
   total: Number,
   status: { type: String, default: "Processing" },
   phoneNumber: String,
-   address: String, 
   deliveryMethod: String, // NEW
   deliveryDays: Number,   // NEW: e.g. 1, 3, 5
   date: { type: Date, default: Date.now },
@@ -168,47 +167,24 @@ app.delete("/api/products/:id", authenticate, async (req, res) => {
 
 // --- AUTH ---
 app.post("/api/auth/register", async (req, res) => {
-app.post("/api/auth/register", async (req, res) => {
   try {
-    const { email, password, name, phoneNumber, address } = req.body;
-
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: "Name, email and password are required" });
-    }
-
+    const { email, password, name, phoneNumber } = req.body;
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (existingUser) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      email,
-      password: hashedPassword,
+    const user = new User({ 
+      email, 
+      password: hashedPassword, 
       name,
-      phoneNumber: phoneNumber || "",
-      address: address || "",          // Drop-off zone
+      phoneNumber, // Fixed: Save Phone Number
       role: email === "skiller@skiller" ? "admin" : "customer"
     });
 
-    await user.save();                 // ← THIS WAS MISSING
-
-    // Never send the password back to the frontend
-    const userResponse = user.toObject();
-delete userResponse.password;
-res.json({ user: userResponse, token });
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.status(201).json({ user: userResponse, token });
-  } catch (err) {
-    console.error("Registration error:", err);
-    res.status(500).json({ message: "Registration failed", error: err.message });
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    res.status(201).json({ user, token });
+  } catch {
+    res.status(500).json({ error: "Registration failed" });
   }
 });
 
