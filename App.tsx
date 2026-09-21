@@ -1050,8 +1050,10 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
             password: formData.password 
           };
       const res = await fetch(`\( {API_BASE} \){endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
       const authData = await res.json();
       if (!res.ok) throw new Error(authData.message || "Identity verification failed.");
       onAuthSuccess(authData.user, authData.token);
