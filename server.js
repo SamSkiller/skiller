@@ -100,6 +100,7 @@ const orderSchema = new mongoose.Schema({
   total: Number,
   status: { type: String, default: "Processing" },
   phoneNumber: String,
+  address: String,
   deliveryMethod: String, // NEW
   deliveryDays: Number,   // NEW: e.g. 1, 3, 5
   date: { type: Date, default: Date.now },
