@@ -1177,7 +1177,7 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
           </div>
         </div>
 
-        <button onClick={() => {setIsLogin(!isLogin); setFormData({name:'', email:'', phoneNumber:'', password:'', confirmPassword:''});}} className="mt-8 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 transition-colors tracking-widest flex flex-col items-center justify-center gap-1 mx-auto">
+        <button onClick={() => {setIsLogin(!isLogin); setFormData({name:'', email:'', phoneNumber:'', address:'', password:'', confirmPassword:''});}} className="mt-8 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 transition-colors tracking-widest flex flex-col items-center justify-center gap-1 mx-auto">
           {isLogin ? "Don't have an account?" : "Already have an account?"}
           <span className="text-rose-600 underline decoration-rose-500 underline-offset-4 hover:text-rose-400 py-1">{isLogin ? "Register Here" : "Log In Here"}</span>
         </button>
