@@ -1024,7 +1024,7 @@ const handleSaveProduct = (e: React.FormEvent) => {
 const AuthView = ({ onAuthSuccess, showToast }: any) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phoneNumber: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phoneNumber: '', address: '', password: '', confirmPassword: '' });
   
   // Forgot Password States
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -1032,25 +1032,35 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
   const [resetData, setResetData] = useState({ email: '', otp: '', newPassword: '' });
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isLogin && formData.password !== formData.confirmPassword) {
-      return showToast("Passwords do not match.", "error");
-    }
-    setIsLoading(true);
-    try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
-      });
-      const authData = await res.json();
-      if (!res.ok) throw new Error(authData.message || "Identity verification failed.");
-      onAuthSuccess(authData.user, authData.token);
-    } catch (err: any) {
-      showToast(err.message || "Sanctuary server is offline.", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  e.preventDefault();
+  if (!isLogin && formData.password !== formData.confirmPassword) {
+    return showToast("Passwords do not match.", "error");
+  }
+  setIsLoading(true);
+  try {
+    const endpoint = isLogin ? "/auth/login" : "/auth/register";
+    // Clean payload – never send confirmPassword
+    const payload = isLogin
+      ? { email: formData.email, password: formData.password }
+      : { 
+          name: formData.name, 
+          email: formData.email, 
+          phoneNumber: formData.phoneNumber, 
+          address: formData.address,   // Drop-off zone
+          password: formData.password 
+        };
+    const res = await fetch(`\( {API_BASE} \){endpoint}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const authData = await res.json();
+    if (!res.ok) throw new Error(authData.message || "Identity verification failed.");
+    onAuthSuccess(authData.user, authData.token);
+  } catch (err: any) {
+    showToast(err.message || "Sanctuary server is offline.", "error");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
