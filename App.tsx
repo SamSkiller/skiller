@@ -1049,7 +1049,7 @@ const AuthView = ({ onAuthSuccess, showToast }: any) => {
             address: formData.address,
             password: formData.password 
           };
-      const res = await fetch(`\( {API_BASE} \){endpoint}`, {
+      const res = await fetch(`(${API_BASE})${endpoint}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const authData = await res.json();
