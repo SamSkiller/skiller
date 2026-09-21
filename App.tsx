@@ -495,10 +495,10 @@ const handleSaveProduct = (e: React.FormEvent) => {
                  { id: 'aov', label: 'Avg Order Value', val: `Ksh ${Math.round(stats.avgOrder).toLocaleString()}`, icon: TrendingUp, color: 'text-rose-500', desc: 'Click to view extremes' },
                  { id: 'pool', label: 'Pool Value', val: `Ksh ${stats.inventoryValue.toLocaleString()}`, icon: Gem, color: 'text-amber-500', desc: 'Click to view inventory split' }
                ].map((s: any, i: number) => (
-                 <div key={i} onClick={() => setExpandedStat(s.id)} className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col justify-center cursor-pointer hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(225,29,72,0.15)] transition-all group">
-                    <s.icon className={`w-6 h-6 md:w-8 md:h-8 mb-4 md:mb-6 ${s.color} group-hover:scale-110 transition-transform`} />
+                 <div key={i} onClick={() => setExpandedStat(s.id)} className="bg-white dark:bg-slate-900 p-6 md:p-8 lg:p-10 rounded-[32px] md:rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col justify-center cursor-pointer hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(225,29,72,0.15)] transition-all group overflow-hidden">
+                    <s.icon className={`w-6 h-6 md:w-8 md:h-8 mb-4 md:mb-6 ${s.color} group-hover:scale-110 transition-transform shrink-0`} />
                     <p className="text-[9px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-widest mb-1 md:mb-2">{s.label}</p>
-                    <h4 className="text-2xl md:text-3xl font-black italic text-slate-900 dark:text-white truncate">{s.val}</h4>
+                    <h4 className="text-xl sm:text-2xl lg:text-3xl font-black italic text-slate-900 dark:text-white truncate w-full" title={s.val}>{s.val}</h4>
                     <p className="text-[8px] font-mono text-slate-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-6">{s.desc}</p>
                  </div>
                ))}
@@ -869,10 +869,13 @@ const handleSaveProduct = (e: React.FormEvent) => {
                     </p>
                   </div>
                   
-                  {/* Purchased Items List */}
+                 {/* Purchased Items List */}
                   <div className="py-3 md:py-4 border-t border-slate-200 dark:border-white/5 mt-3">
-                    <span className="font-mono text-[8px] md:text-[9px] uppercase text-slate-500 mb-2 block">Cart Items</span>
-                    <div className="space-y-2 max-h-32 overflow-y-auto pr-2 scrollbar-hide">
+                    <div className="flex justify-between items-center mb-2">
+                       <span className="font-mono text-[8px] md:text-[9px] uppercase text-slate-500 block">Cart Items</span>
+                       <span className="font-mono text-[7px] md:text-[8px] uppercase text-rose-500 font-bold bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">Total Items: {o.items?.length || 0}</span>
+                    </div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e11d48 transparent' }}>
                       {o.items?.map((item: any, idx: number) => (
                         <div key={idx} className="flex justify-between items-center text-[10px] md:text-xs bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
                           <div className="flex items-center gap-3 min-w-0 pr-2">
@@ -1021,67 +1024,162 @@ const handleSaveProduct = (e: React.FormEvent) => {
 const AuthView = ({ onAuthSuccess, showToast }: any) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phoneNumber: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phoneNumber: '', address: '', password: '', confirmPassword: '' });
+  
+  // Forgot Password States
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [resetData, setResetData] = useState({ email: '', otp: '', newPassword: '' });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLogin && formData.password !== formData.confirmPassword) {
       return showToast("Passwords do not match.", "error");
     }
-    
     setIsLoading(true);
-    const endpoint = isLogin ? "/auth/login" : "/auth/register";
-    let authData = null;
-
     try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      // Clean payload – never send confirmPassword
+      const payload = isLogin
+        ? { email: formData.email, password: formData.password }
+        : { 
+            name: formData.name, 
+            email: formData.email, 
+            phoneNumber: formData.phoneNumber, 
+            address: formData.address,
+            password: formData.password 
+          };
+      const res = await fetch(`\( {API_BASE} \){endpoint}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
-      authData = await res.json();
-      if (!res.ok) {
-        setIsLoading(false);
-        return showToast(authData.message || "Identity verification failed.", "error");
-      }
-    } catch (err) {
-      setIsLoading(false);
-      return showToast("Sanctuary server is offline. Check connection.", "error");
-    }
-
-    if (authData) {
+      const authData = await res.json();
+      if (!res.ok) throw new Error(authData.message || "Identity verification failed.");
       onAuthSuccess(authData.user, authData.token);
+    } catch (err: any) {
+      showToast(err.message || "Sanctuary server is offline.", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const handleRequestOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: resetData.email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      
+      // Development mock: Alert the OTP since you don't have email setup yet
+      alert(`MOCK EMAIL: Your OTP is ${data.mockOtp}`); 
+      showToast("OTP sent to your email address.", "success");
+      setOtpStep(true);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(resetData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      
+      showToast(data.message, "success");
+      setIsForgotPassword(false);
+      setOtpStep(false);
+      setIsLogin(true);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const SocialLoginButton = ({ icon: Icon, provider }: any) => (
+    <button type="button" onClick={() => showToast(`OAuth for ${provider} requires backend setup. Coming soon!`, 'info')} className="w-12 h-12 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-rose-300 transition-all shadow-sm">
+      <Icon className="w-5 h-5" />
+    </button>
+  );
+
+  if (isForgotPassword) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center px-6 py-12 md:py-20 overflow-y-auto">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[40px] shadow-2xl border border-slate-200 dark:border-slate-800 animate-future-in text-center relative mt-auto mb-auto">
+           <button onClick={() => { setIsForgotPassword(false); setOtpStep(false); }} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-rose-500"><ArrowLeft className="w-4 h-4"/></button>
+           <ShieldAlert className="w-12 h-12 text-rose-500 mx-auto mb-6" />
+           <h2 className="text-2xl font-serif italic font-bold text-slate-900 dark:text-white mb-2">Password Recovery</h2>
+           <p className="text-slate-500 text-xs mb-8">{otpStep ? "Enter the 4-digit code sent to your email." : "Enter your email to receive a secure code."}</p>
+           
+           {!otpStep ? (
+             <form onSubmit={handleRequestOTP} className="space-y-4">
+                <input required type="email" placeholder="Email Address" className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300" value={resetData.email} onChange={e => setResetData({...resetData, email: e.target.value})} />
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-slate-900 dark:bg-rose-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl hover:bg-rose-500 active:scale-95 disabled:opacity-50">
+                  {isLoading ? 'Processing...' : 'Send OTP'}
+                </button>
+             </form>
+           ) : (
+             <form onSubmit={handleResetPassword} className="space-y-4">
+                <input required type="text" maxLength={4} placeholder="4-Digit OTP" className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300 text-center tracking-[0.5em] text-xl" value={resetData.otp} onChange={e => setResetData({...resetData, otp: e.target.value})} />
+                <input required type="password" placeholder="New Password" className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300" value={resetData.newPassword} onChange={e => setResetData({...resetData, newPassword: e.target.value})} />
+                <button type="submit" disabled={isLoading} className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-xl hover:bg-emerald-400 active:scale-95 disabled:opacity-50">
+                  {isLoading ? 'Processing...' : 'Reset Password'}
+                </button>
+             </form>
+           )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-6 py-12 md:py-20 overflow-y-auto">
      <div className="w-full max-w-md bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[40px] md:rounded-[64px] shadow-2xl border border-slate-200 dark:border-slate-800 animate-future-in text-center relative overflow-hidden mt-auto mb-auto">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 blur-3xl"></div>
-        <div className="w-16 h-16 md:w-20 md:h-20 bg-rose-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-8 md:mb-10 text-rose-500 shadow-xl border-4 border-white dark:border-slate-900"><Lock className="w-6 h-6 md:w-8 md:h-8" /></div>
-        <h2 className="text-3xl md:text-4xl font-serif italic font-bold text-slate-900 dark:text-white mb-3 md:mb-4">{isLogin ? 'Login' : 'Identity Registration'}</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-xs md:text-sm italic mb-8 md:mb-10 font-medium">
-          {isLogin ? 'Enter your details to continue.' : 'Enter your new details.'}
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 text-left">
-          {!isLogin && <input required className="w-full p-4 md:p-6 text-sm md:text-base bg-slate-100 dark:bg-slate-800 rounded-2xl md:rounded-[24px] font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300 transition-all" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />}
+        <div className="w-16 h-16 bg-rose-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-500 shadow-xl border-4 border-white dark:border-slate-900"><Lock className="w-6 h-6" /></div>
+        <h2 className="text-3xl font-serif italic font-bold text-slate-900 dark:text-white mb-2">{isLogin ? 'Login' : 'Registration'}</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-xs italic mb-6">Initialize your Skiller identity.</p>
+        
+        <form onSubmit={handleAuthSubmit} className="space-y-4 text-left">
+          {!isLogin && <input required className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />}
+          {!isLogin && <input required type="tel" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Phone Number (M-Pesa)" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} />}
+          {!isLogin && <input required className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Drop-off Location / Delivery Address" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />}
           
-          {!isLogin && <input required type="tel" className="w-full p-4 md:p-6 text-sm md:text-base bg-slate-100 dark:bg-slate-800 rounded-2xl md:rounded-[24px] font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300 transition-all" placeholder="Phone Number (M-Pesa)" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} />}
+          <input required type="email" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Email Address" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+          <input required type="password" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+          
+          {!isLogin && <input required type="password" className="w-full p-4 text-sm bg-slate-100 dark:bg-slate-800 rounded-2xl font-bold outline-none text-slate-900 dark:text-white focus:border-rose-300 transition-all border border-transparent" placeholder="Confirm Password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />}
+          
+          {isLogin && <div className="text-right"><button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] text-rose-500 font-bold uppercase tracking-widest hover:text-rose-400">Forgot Password?</button></div>}
 
-          <input required type="email" className="w-full p-4 md:p-6 text-sm md:text-base bg-slate-100 dark:bg-slate-800 rounded-2xl md:rounded-[24px] font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300 transition-all [&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_30px_#1e293b_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]" placeholder="Email Address" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-          
-          <input required type="password" className="w-full p-4 md:p-6 text-sm md:text-base bg-slate-100 dark:bg-slate-800 rounded-2xl md:rounded-[24px] font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300 transition-all [&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_30px_#1e293b_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-
-          {!isLogin && <input required type="password" className="w-full p-4 md:p-6 text-sm md:text-base bg-slate-100 dark:bg-slate-800 rounded-2xl md:rounded-[24px] font-bold outline-none text-slate-900 dark:text-white border border-transparent focus:border-rose-300 transition-all [&:-webkit-autofill]:[Webkit-box-shadow:0_0_0_30px_#1e293b_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]" placeholder="Confirm Password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />}
-          
-          <button type="submit" disabled={isLoading} className="w-full py-4 md:py-7 bg-slate-900 dark:bg-rose-600 text-white rounded-2xl md:rounded-[32px] font-black uppercase tracking-widest text-[10px] md:text-[11px] shadow-2xl hover:bg-rose-600 transition-all active:scale-95 flex items-center justify-center gap-2 md:gap-3 disabled:opacity-70">
-            {isLoading ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : null}
+          <button type="submit" disabled={isLoading} className="w-full py-4 bg-slate-900 dark:bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-rose-500 transition-all active:scale-95 disabled:opacity-70">
             {isLoading ? 'Processing...' : isLogin ? 'Login' : 'Register'}
           </button>
         </form>
-        <button onClick={() => {setIsLogin(!isLogin); setFormData({name:'', email:'', password:'', confirmPassword:''});}} className="mt-10 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 transition-colors tracking-widest flex items-center justify-center gap-1 mx-auto">
+
+        <div className="mt-8">
+          <div className="flex items-center gap-4 mb-6">
+             <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+             <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">Or Continue With</span>
+             <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+          </div>
+          <div className="flex justify-center gap-4">
+             <SocialLoginButton icon={Globe} provider="Google" />
+             <SocialLoginButton icon={Github} provider="Github" />
+             <SocialLoginButton icon={Users} provider="Facebook" />
+          </div>
+        </div>
+
+        <button onClick={() => {setIsLogin(!isLogin); setFormData({name:'', email:'', phoneNumber:'', address:'', password:'', confirmPassword:''});}} className="mt-8 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 transition-colors tracking-widest flex flex-col items-center justify-center gap-1 mx-auto">          
           {isLogin ? "Don't have an account?" : "Already have an account?"}
-          <span className="text-rose-600 underline decoration-rose-500 underline-offset-4 hover:text-rose-400 p-2">{isLogin ? "Register" : "Log In"}</span>
+          <span className="text-rose-600 underline decoration-rose-500 underline-offset-4 hover:text-rose-400 py-1">{isLogin ? "Register Here" : "Log In Here"}</span>
         </button>
       </div>
     </div>
@@ -1729,7 +1827,14 @@ const MainContent = () => {
   }, [isDarkMode]);
 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS || []);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+  const savedCart = localStorage.getItem('skiller_cart');
+  return savedCart ? JSON.parse(savedCart) : [];
+});
+
+useEffect(() => {
+  localStorage.setItem('skiller_cart', JSON.stringify(cart));
+}, [cart]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -2549,6 +2654,7 @@ const ProfileModal = ({ user, orders, onClose, onLogout, wishlistProducts, onRem
     email: user.email, 
     phoneNumber: user.phoneNumber || '', 
     address: user.address || '', 
+    profilePic: user.profilePic || '',
     password: '' 
   });
 
@@ -2641,12 +2747,24 @@ const ProfileModal = ({ user, orders, onClose, onLogout, wishlistProducts, onRem
           
           {activeTab === 'profile' && (
             <div className="space-y-6 md:space-y-10 animate-fade-in">
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                 <div className="bg-slate-100 dark:bg-slate-800/50 p-6 md:p-10 rounded-[32px] md:rounded-[48px] border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center overflow-hidden">
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+  {/* NEW: VIP Status Card */}
+  <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/20 p-6 md:p-10 rounded-[32px] md:rounded-[48px] border border-amber-500/30 flex flex-col items-center justify-center text-center relative overflow-hidden">
+    <Crown className="absolute top-4 right-4 w-6 h-6 text-amber-500/30" />
+    <p className="text-[9px] md:text-[10px] font-black uppercase text-amber-600 dark:text-amber-500 mb-2 md:mb-4 tracking-widest">Skiller Points</p>
+    <div className="flex items-center gap-2 md:gap-3">
+       <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-amber-500 shrink-0" />
+       <span className="text-2xl md:text-3xl font-black italic text-slate-900 dark:text-white drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+         {user.faithPoints || 0}
+       </span>
+    </div>
+  </div>
+
+  <div className="bg-slate-100 dark:bg-slate-800/50 p-6 md:p-10 rounded-[32px] md:rounded-[48px] border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center overflow-hidden">
                     <p className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 md:mb-4 tracking-widest">My Spend</p>
-                    <div className="flex items-center gap-2 md:gap-3 max-w-full">
-                       <DollarSign className="w-8 h-8 md:w-10 md:h-10 text-emerald-500 shrink-0" />
-                       <span className="text-xl sm:text-2xl md:text-3xl font-black italic text-slate-900 dark:text-white truncate min-w-0" title={`Ksh ${orders.filter((o:any) => o.userId === (user.id || user._id) && o.status !== 'Cancelled').reduce((sum:number, o:any) => sum + (o.total || 0), 0).toLocaleString()}`}>
+                    <div className="flex items-center gap-1 md:gap-3 max-w-full">
+                       <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-emerald-500 shrink-0" />
+                       <span className="text-lg sm:text-xl lg:text-2xl font-black italic text-slate-900 dark:text-white truncate min-w-0" title={`Ksh ${orders.filter((o:any) => o.userId === (user.id || user._id) && o.status !== 'Cancelled').reduce((sum:number, o:any) => sum + (o.total || 0), 0).toLocaleString()}`}>
                          Ksh {orders.filter((o:any) => o.userId === (user.id || user._id) && o.status !== 'Cancelled').reduce((sum:number, o:any) => sum + (o.total || 0), 0).toLocaleString()}
                        </span>
                     </div>
