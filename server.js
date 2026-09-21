@@ -580,7 +580,7 @@ app.post("/api/mpesa/stkpush", authenticate, async (req, res) => {
           PartyB: process.env.MPESA_SHORTCODE,
           PhoneNumber: formattedPhone,
           CallBackURL: "https://faith-blst.onrender.com/api/mpesa/callback", // ← change to your real domain
-          AccountReference: "Skiller Shop",
+          AccountReference: "25475780878801",
           TransactionDesc: "Skiller Shop Payment",
         }),
       }
